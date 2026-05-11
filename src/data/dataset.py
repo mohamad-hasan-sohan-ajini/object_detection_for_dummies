@@ -129,7 +129,8 @@ class RectanglesDataset(Dataset):
 
 def detection_collate_fn(batch):
     images, targets = zip(*batch)
-    return list(images), list(targets)
+    images = torch.stack(images, dim=0)
+    return images, list(targets)
 
 
 def create_dataloader(
