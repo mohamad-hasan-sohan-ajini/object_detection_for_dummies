@@ -6,12 +6,15 @@ from PIL import Image, ImageDraw
 
 from config import (
     IMAGE_SIZE,
-    MIN_NUM_RECTS,
-    MAX_NUM_RECTS,
+    MIN_NUM_OBJS,
+    MAX_NUM_OBJS,
     ROT_DEG_AUG,
-    MIN_RECT_SIZE,
-    MAX_RECT_SIZE,
+    MIN_OBJS_SIZE,
+    MAX_OBJS_SIZE,
 )
+
+RECTANGLE_LABEL = 1
+CIRCLE_LABEL = 2
 
 
 def random_color():
@@ -66,6 +69,20 @@ def paste_rotated_rect(base_img, cx, cy, w, h, color, angle):
     base_img.paste(rotated, (px, py), rotated)
 
 
+def paste_circle(base_img, cx, cy, diameter, color):
+    draw = ImageDraw.Draw(base_img)
+    radius = diameter / 2
+    draw.ellipse(
+        [
+            cx - radius,
+            cy - radius,
+            cx + radius,
+            cy + radius,
+        ],
+        fill=color,
+    )
+
+
 def bbox_from_center(cx, cy, w, h, angle_deg):
     bbox_w, bbox_h = rotated_bbox_size(w, h, angle_deg)
 
@@ -88,27 +105,47 @@ def generate_image_and_labels():
     img = Image.fromarray(bg_pixels, mode="RGB")
     labels = []
 
-    num_rects = random.randint(MIN_NUM_RECTS, MAX_NUM_RECTS)
+    num_objects = random.randint(MIN_NUM_OBJS, MAX_NUM_OBJS)
 
-    for _ in range(num_rects):
-        w = random.randint(MIN_RECT_SIZE, MAX_RECT_SIZE)
-        h = random.randint(MIN_RECT_SIZE, MAX_RECT_SIZE)
+    for _ in range(num_objects):
+        object_type = random.choice(["rectangle", "circle"])
 
         color = random_color()
-        angle = random.uniform(-ROT_DEG_AUG, ROT_DEG_AUG)
 
-        cx, cy = random_valid_center(IMAGE_SIZE, w, h, angle)
+        if object_type == "rectangle":
+            w = random.randint(MIN_OBJS_SIZE, MAX_OBJS_SIZE)
+            h = random.randint(MIN_OBJS_SIZE, MAX_OBJS_SIZE)
+            angle = random.uniform(-ROT_DEG_AUG, ROT_DEG_AUG)
 
-        bbox = bbox_from_center(cx, cy, w, h, angle)
+            cx, cy = random_valid_center(IMAGE_SIZE, w, h, angle)
+            bbox = bbox_from_center(cx, cy, w, h, angle)
 
-        paste_rotated_rect(img, cx, cy, w, h, color, angle)
+            paste_rotated_rect(img, cx, cy, w, h, color, angle)
 
-        labels.append(
-            {
-                "bbox": bbox,  # [x_min, y_min, x_max, y_max]
-                "angle": angle,
-                "color": color,
-            }
-        )
+            labels.append(
+                {
+                    "bbox": bbox,  # [x_min, y_min, x_max, y_max]
+                    "label": RECTANGLE_LABEL,
+                    "shape": object_type,
+                    "angle": angle,
+                    "color": color,
+                }
+            )
+        else:
+            diameter = random.randint(MIN_OBJS_SIZE, MAX_OBJS_SIZE)
+            cx, cy = random_valid_center(IMAGE_SIZE, diameter, diameter, 0)
+            bbox = bbox_from_center(cx, cy, diameter, diameter, 0)
+
+            paste_circle(img, cx, cy, diameter, color)
+
+            labels.append(
+                {
+                    "bbox": bbox,  # [x_min, y_min, x_max, y_max]
+                    "label": CIRCLE_LABEL,
+                    "shape": object_type,
+                    "angle": 0,
+                    "color": color,
+                }
+            )
 
     return img, labels
