@@ -129,8 +129,28 @@ class RectanglesDataset(Dataset):
 
 def detection_collate_fn(batch):
     images, targets = zip(*batch)
+
     images = torch.stack(images, dim=0)
-    return images, list(targets)
+
+    batch_size = len(targets)
+    max_objects = 3  # or MAX_NUM_OBJS from config
+
+    boxes = torch.zeros((batch_size, max_objects, 4), dtype=torch.float32)
+    labels = torch.zeros((batch_size, max_objects), dtype=torch.int64)
+    object_mask = torch.zeros((batch_size, max_objects), dtype=torch.bool)
+
+    for i, target in enumerate(targets):
+        num_objects = min(target["boxes"].shape[0], max_objects)
+
+        boxes[i, :num_objects] = target["boxes"][:num_objects]
+        labels[i, :num_objects] = target["labels"][:num_objects]
+        object_mask[i, :num_objects] = True
+
+    return images, {
+        "boxes": boxes,
+        "labels": labels,
+        "object_mask": object_mask,
+    }
 
 
 def create_dataloader(
