@@ -1,8 +1,8 @@
 IMAGE_SIZE = 128
 
-# rectangles parameters
-MIN_NUM_RECTS = 1
-MAX_NUM_RECTS = 3
+# object parameters
+MIN_NUM_OBJS = 1
+MAX_NUM_OBJS = 3
 ROT_DEG_AUG = 15
-MIN_RECT_SIZE = 10
-MAX_RECT_SIZE = 40
+MIN_OBJS_SIZE = 10
+MAX_OBJS_SIZE = 40
