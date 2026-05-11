@@ -13,6 +13,25 @@ DATA_DIR = Path(__file__).resolve().parent
 TRAIN_DATASET_PATH = DATA_DIR / "val_dataset.pt"
 VAL_DATASET_PATH = DATA_DIR / "val_dataset.pt"
 
+OBJECT_TYPE_TO_LABEL = {
+    "rectangle": 1,
+    "circle": 2,
+}
+LABEL_TO_OBJECT_TYPE = {label: name for name, label in OBJECT_TYPE_TO_LABEL.items()}
+
+
+def get_label_object_type(label: dict) -> tuple[int, str]:
+    object_type = label.get("shape")
+
+    if object_type is not None:
+        if object_type not in OBJECT_TYPE_TO_LABEL:
+            raise ValueError(f"Unknown object type: {object_type}")
+
+        return OBJECT_TYPE_TO_LABEL[object_type], object_type
+
+    class_label = label.get("label", OBJECT_TYPE_TO_LABEL["rectangle"])
+    return class_label, LABEL_TO_OBJECT_TYPE.get(class_label, "rectangle")
+
 
 def get_train_transforms() -> A.Compose:
     transforms = [
@@ -48,7 +67,7 @@ def get_train_transforms() -> A.Compose:
         transforms,
         bbox_params=A.BboxParams(
             format="pascal_voc",
-            label_fields=["class_labels"],
+            label_fields=["class_labels", "object_types"],
             min_area=1,
             min_visibility=0.0,
         ),
@@ -71,17 +90,23 @@ class RectanglesDataset(Dataset):
         image = np.array(sample["image"].convert("RGB"))
 
         bboxes = [label["bbox"] for label in sample["labels"]]
-        class_labels = [1] * len(bboxes)
+        label_object_types = [
+            get_label_object_type(label) for label in sample["labels"]
+        ]
+        class_labels = [label for label, _ in label_object_types]
+        object_types = [object_type for _, object_type in label_object_types]
 
         if self.transforms is not None:
             transformed = self.transforms(
                 image=image,
                 bboxes=bboxes,
                 class_labels=class_labels,
+                object_types=object_types,
             )
             image = transformed["image"].float() / 255.0
             bboxes = transformed["bboxes"]
             class_labels = transformed["class_labels"]
+            object_types = transformed["object_types"]
         else:
             image = torch.from_numpy(image.transpose(2, 0, 1)).float() / 255.0
 
@@ -96,9 +121,7 @@ class RectanglesDataset(Dataset):
         target = {
             "boxes": boxes,
             "labels": labels,
-            "image_id": torch.tensor([idx], dtype=torch.int64),
-            "area": (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1]),
-            "iscrowd": torch.zeros((boxes.shape[0],), dtype=torch.int64),
+            "object_types": object_types,
         }
 
         return image, target
