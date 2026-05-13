@@ -1,7 +1,4 @@
-import os
 from pathlib import Path
-
-os.environ.setdefault("NO_ALBUMENTATIONS_UPDATE", "1")
 
 import albumentations as A
 import numpy as np
@@ -10,7 +7,7 @@ from albumentations.pytorch import ToTensorV2
 from torch.utils.data import DataLoader, Dataset
 
 DATA_DIR = Path(__file__).resolve().parent
-TRAIN_DATASET_PATH = DATA_DIR / "val_dataset.pt"
+TRAIN_DATASET_PATH = DATA_DIR / "train_dataset.pt"
 VAL_DATASET_PATH = DATA_DIR / "val_dataset.pt"
 
 OBJECT_TYPE_TO_LABEL = {
@@ -201,3 +198,11 @@ if __name__ == "__main__":
         batch_size=32,
         num_workers=4,
     )
+    for batch in train_loader:
+        images, targets = batch
+        print("Batch of images shape:", images.shape)
+        print("Batch of boxes shape:", targets["boxes"].shape)
+        print("Batch of labels shape:", targets["labels"].shape)
+        print("Batch of object mask shape:", targets["object_mask"].shape)
+        break
+    torch.save(batch, "batch.pt")
