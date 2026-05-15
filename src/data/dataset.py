@@ -130,7 +130,7 @@ def detection_collate_fn(batch):
     images = torch.stack(images, dim=0)
 
     batch_size = len(targets)
-    max_objects = 3  # or MAX_NUM_OBJS from config
+    max_objects = 2  # or MAX_NUM_OBJS from config
 
     boxes = torch.zeros((batch_size, max_objects, 4), dtype=torch.float32)
     labels = torch.zeros((batch_size, max_objects), dtype=torch.int64)
