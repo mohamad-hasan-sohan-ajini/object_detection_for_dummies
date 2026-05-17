@@ -53,12 +53,18 @@ class PositionalEncoding2D(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         """Add positional encoding to the signal
 
-        :param x: input of shape [batch_size, channels, height, width]
+        :param x: input of shape [batch_size, channels, height, width] or
+            [batch_size, height * width, channels]
         :type x: torch.Tensor
         :returns: Positional encoded added signal
         :rtype: torch.Tensor
         """
-        return x + self.pe
+        if x.dim() == 4:
+            return x + self.pe
+
+        if x.dim() == 3:
+            pe = self.pe.flatten(2).transpose(1, 2).contiguous()
+            return x + pe
 
 
 class FixedPositionalEncoding2D(PositionalEncoding2D):
