@@ -20,9 +20,16 @@ class ObjectQuery(nn.Module):
     def vectors(self) -> torch.Tensor:
         return self.query_vectors
 
-    def forward(self, batch_size) -> torch.Tensor:
+    def forward(self) -> torch.Tensor:
         """Return query vectors as ``[num_queries, dim]`` or ``[batch, num_queries, dim]``."""
-        if batch_size is None:
-            return self.vectors
+        return self.query_vectors
 
-        return self.vectors.unsqueeze(0).expand(batch_size, -1, -1)
+
+if __name__ == "__main__":
+    # Example usage
+    embedding_dim = 256
+    num_queries = 100
+
+    object_query = ObjectQuery(embedding_dim=embedding_dim, num_queries=num_queries)
+    query_vectors = object_query()
+    print("Query vectors shape:", query_vectors.shape)
