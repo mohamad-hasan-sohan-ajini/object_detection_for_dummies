@@ -19,15 +19,6 @@ from model.positional_encoding import FixedPositionalEncoding2D
 from model.utils import get_resnet_backbone
 
 
-def get_cuda_device() -> torch.device:
-    if not torch.cuda.is_available():
-        raise RuntimeError(
-            "CUDA was requested for training, but no CUDA device is available."
-        )
-
-    return torch.device("cuda")
-
-
 def build_model() -> TransformerModel:
     return TransformerModel(
         backbone_builder=get_resnet_backbone,
@@ -209,7 +200,7 @@ def log_metrics(
 def main() -> None:
     from torch.utils.tensorboard import SummaryWriter
 
-    device = get_cuda_device()
+    device = torch.device("cuda", index=0)
     torch.backends.cudnn.benchmark = True
     project_dir = Path(__file__).resolve().parent
 
