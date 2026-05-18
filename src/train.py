@@ -156,7 +156,6 @@ def save_checkpoint(
     optimizer: AdamW,
     train_metrics: dict[str, float],
     val_metrics: dict[str, float],
-    is_best: bool,
 ) -> None:
     checkpoint_dir = Path(checkpoint_dir)
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -176,9 +175,6 @@ def save_checkpoint(
 
     if epoch % config.CHECKPOINT_EVERY_N_EPOCHS == 0:
         torch.save(checkpoint, checkpoint_dir / f"epoch_{epoch:03d}.pt")
-
-    if is_best:
-        torch.save(checkpoint, checkpoint_dir / "best.pt")
 
 
 def log_metrics(
