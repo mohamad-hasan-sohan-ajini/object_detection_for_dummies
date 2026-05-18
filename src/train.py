@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
+from torchvision.utils import draw_bounding_boxes, make_grid
 from tqdm.auto import tqdm
 
 import config
@@ -201,6 +202,90 @@ def log_metrics(
     writer.add_scalar("learning_rate", optimizer.param_groups[0]["lr"], epoch)
 
 
+def xyxy_from_unordered_boxes(boxes: Tensor) -> Tensor:
+    xy_min = torch.minimum(boxes[:, :2], boxes[:, 2:])
+    xy_max = torch.maximum(boxes[:, :2], boxes[:, 2:])
+    return torch.cat((xy_min, xy_max), dim=-1)
+
+
+def get_prediction_labels_and_boxes(
+    pred_class_logits: Tensor,
+    pred_boxes: Tensor,
+) -> tuple[Tensor, Tensor, Tensor]:
+    class_probs = pred_class_logits.softmax(dim=-1)
+    class_scores, class_labels = class_probs.max(dim=-1)
+    keep = (class_labels != 0) & (class_scores >= config.PREDICTION_SCORE_THRESHOLD)
+
+    if keep.any():
+        selected_scores = class_scores[keep]
+        selected_labels = class_labels[keep]
+        selected_boxes = pred_boxes[keep]
+    else:
+        non_background_scores, non_background_indices = class_probs[:, 1:].max(dim=-1)
+        selected_scores = non_background_scores
+        selected_labels = non_background_indices + 1
+        selected_boxes = pred_boxes
+
+    num_predictions = min(config.TENSORBOARD_MAX_PREDICTIONS, selected_scores.numel())
+    top_scores, top_indices = selected_scores.topk(num_predictions)
+    top_labels = selected_labels[top_indices]
+    top_boxes = selected_boxes[top_indices]
+
+    return top_scores, top_labels, top_boxes
+
+
+def log_validation_predictions(
+    writer: Any,
+    epoch: int,
+    model: nn.Module,
+    fixed_images: Tensor,
+    device: torch.device,
+) -> None:
+    model.eval()
+    with torch.no_grad():
+        pred_class_logits, pred_boxes = model(fixed_images.to(device))
+
+    rendered_images = []
+    num_images = min(config.TENSORBOARD_NUM_IMAGES, fixed_images.shape[0])
+
+    for image_idx in range(num_images):
+        image = (fixed_images[image_idx].detach().cpu() * 255.0).clamp(0, 255)
+        image = image.to(torch.uint8)
+
+        scores, labels, boxes = get_prediction_labels_and_boxes(
+            pred_class_logits[image_idx].detach().cpu(),
+            pred_boxes[image_idx].detach().cpu(),
+        )
+        boxes = xyxy_from_unordered_boxes(boxes.clamp(0.0, 1.0))
+        boxes = boxes * float(config.IMAGE_SIZE)
+
+        valid_boxes = (boxes[:, 2] > boxes[:, 0]) & (boxes[:, 3] > boxes[:, 1])
+        boxes = boxes[valid_boxes]
+        scores = scores[valid_boxes]
+        labels = labels[valid_boxes]
+
+        box_labels = [
+            f"{config.CLASS_NAMES[int(label)]} {float(score):.2f}"
+            for label, score in zip(labels, scores)
+        ]
+
+        rendered_images.append(
+            draw_bounding_boxes(
+                image=image,
+                boxes=boxes,
+                labels=box_labels,
+                colors="red",
+                width=2,
+            )
+        )
+
+    writer.add_image(
+        "validation/predictions",
+        make_grid(rendered_images, nrow=2),
+        epoch,
+    )
+
+
 def main() -> None:
     from torch.utils.tensorboard import SummaryWriter
 
@@ -212,6 +297,7 @@ def main() -> None:
         batch_size=config.BATCH_SIZE,
         num_workers=config.NUM_WORKERS,
     )
+    fixed_val_images, _ = next(iter(val_loader))
     model = build_model().to(device)
     matcher = HungarianMatcher(
         class_weight=config.MATCHER_CLASS_WEIGHT,
@@ -260,6 +346,13 @@ def main() -> None:
                 train_metrics=train_metrics,
                 val_metrics=val_metrics,
                 optimizer=optimizer,
+            )
+            log_validation_predictions(
+                writer=writer,
+                epoch=epoch,
+                model=model,
+                fixed_images=fixed_val_images,
+                device=device,
             )
             writer.flush()
 
