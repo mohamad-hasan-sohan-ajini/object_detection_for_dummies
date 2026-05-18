@@ -71,12 +71,9 @@ def compute_losses(
         target_classes,
     )
 
-    if pred_bbox_indices[0].numel() == 0:
-        bbox_loss = pred_boxes.sum() * 0.0
-    else:
-        matched_pred_boxes = pred_boxes[pred_bbox_indices]
-        matched_target_boxes = targets["boxes"][target_bbox_indices]
-        bbox_loss = F.smooth_l1_loss(matched_pred_boxes, matched_target_boxes)
+    matched_pred_boxes = pred_boxes[pred_bbox_indices]
+    matched_target_boxes = targets["boxes"][target_bbox_indices]
+    bbox_loss = F.smooth_l1_loss(matched_pred_boxes, matched_target_boxes)
 
     loss = config.CLASS_LOSS_WEIGHT * class_loss + config.BBOX_LOSS_WEIGHT * bbox_loss
     metrics = {
@@ -142,9 +139,6 @@ def run_epoch(
                 cls=totals["class_loss"] / num_batches,
                 bbox=totals["bbox_loss"] / num_batches,
             )
-
-    if num_batches == 0:
-        return totals
 
     return {key: value / num_batches for key, value in totals.items()}
 
@@ -262,7 +256,6 @@ def main() -> None:
                 optimizer=optimizer,
                 train_metrics=train_metrics,
                 val_metrics=val_metrics,
-                is_best=is_best,
             )
 
             print(
