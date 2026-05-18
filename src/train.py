@@ -264,6 +264,16 @@ def log_validation_predictions(
         scores = scores[valid_boxes]
         labels = labels[valid_boxes]
 
+        image_scale = config.TENSORBOARD_IMAGE_SCALE
+        if image_scale != 1:
+            image = F.interpolate(
+                image.unsqueeze(0).float(),
+                scale_factor=image_scale,
+                mode="nearest",
+            ).squeeze(0)
+            image = image.to(torch.uint8)
+            boxes = boxes * float(image_scale)
+
         box_labels = [
             f"{config.CLASS_NAMES[int(label)]} {float(score):.2f}"
             for label, score in zip(labels, scores)
@@ -275,7 +285,8 @@ def log_validation_predictions(
                 boxes=boxes,
                 labels=box_labels,
                 colors="red",
-                width=2,
+                width=max(1, 2 * image_scale),
+                font_size=max(10, 10 * image_scale),
             )
         )
 
