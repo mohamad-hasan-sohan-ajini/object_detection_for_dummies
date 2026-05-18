@@ -219,7 +219,6 @@ def main() -> None:
         weight_decay=config.WEIGHT_DECAY,
     )
 
-    best_val_loss = float("inf")
     log_dir = project_dir / config.LOG_DIR
 
     with SummaryWriter(log_dir=log_dir) as writer:
@@ -250,10 +249,6 @@ def main() -> None:
                 device=device,
                 description=f"epoch {epoch:03d}/{config.NUM_EPOCHS:03d} val",
             )
-
-            is_best = val_metrics["loss"] < best_val_loss
-            if is_best:
-                best_val_loss = val_metrics["loss"]
 
             log_metrics(
                 writer=writer,
