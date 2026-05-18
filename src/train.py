@@ -57,6 +57,7 @@ def compute_losses(
     targets: dict[str, Tensor],
     matcher: HungarianMatcher,
 ) -> tuple[Tensor, dict[str, float]]:
+
     pred_class_probs = pred_class_logits.softmax(dim=-1)
 
     with torch.no_grad():
@@ -66,9 +67,15 @@ def compute_losses(
             targets,
         )
 
+    class_weights = torch.as_tensor(
+        [1.0 / frequency for frequency in config.CLASS_FREQUENCIES],
+        dtype=pred_class_logits.dtype,
+        device=pred_class_logits.device,
+    )
     class_loss = F.cross_entropy(
         pred_class_logits.transpose(1, 2),
         target_classes,
+        weight=class_weights,
     )
     class_predictions = pred_class_logits.argmax(dim=-1)
     class_accuracy = (class_predictions == target_classes).float().mean()
