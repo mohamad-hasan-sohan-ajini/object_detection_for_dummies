@@ -70,6 +70,8 @@ def compute_losses(
         pred_class_logits.transpose(1, 2),
         target_classes,
     )
+    class_predictions = pred_class_logits.argmax(dim=-1)
+    class_accuracy = (class_predictions == target_classes).float().mean()
 
     matched_pred_boxes = pred_boxes[pred_bbox_indices]
     matched_target_boxes = targets["boxes"][target_bbox_indices]
@@ -80,6 +82,7 @@ def compute_losses(
         "loss": float(loss.detach().cpu()),
         "class_loss": float(class_loss.detach().cpu()),
         "bbox_loss": float(bbox_loss.detach().cpu()),
+        "class_accuracy": float(class_accuracy.detach().cpu()),
     }
 
     return loss, metrics
@@ -100,6 +103,7 @@ def run_epoch(
         "loss": 0.0,
         "class_loss": 0.0,
         "bbox_loss": 0.0,
+        "class_accuracy": 0.0,
     }
     num_batches = 0
 
@@ -138,6 +142,7 @@ def run_epoch(
                 loss=totals["loss"] / num_batches,
                 cls=totals["class_loss"] / num_batches,
                 bbox=totals["bbox_loss"] / num_batches,
+                acc=totals["class_accuracy"] / num_batches,
             )
 
     return {key: value / num_batches for key, value in totals.items()}
@@ -184,6 +189,8 @@ def log_metrics(
     writer.add_scalar("class_loss/val", val_metrics["class_loss"], epoch)
     writer.add_scalar("bbox_loss/train", train_metrics["bbox_loss"], epoch)
     writer.add_scalar("bbox_loss/val", val_metrics["bbox_loss"], epoch)
+    writer.add_scalar("class_accuracy/train", train_metrics["class_accuracy"], epoch)
+    writer.add_scalar("class_accuracy/val", val_metrics["class_accuracy"], epoch)
     writer.add_scalar("learning_rate", optimizer.param_groups[0]["lr"], epoch)
 
 
@@ -263,9 +270,11 @@ def main() -> None:
                 f"train_loss={train_metrics['loss']:.4f} "
                 f"train_class={train_metrics['class_loss']:.4f} "
                 f"train_bbox={train_metrics['bbox_loss']:.4f} "
+                f"train_acc={train_metrics['class_accuracy']:.4f} "
                 f"val_loss={val_metrics['loss']:.4f} "
                 f"val_class={val_metrics['class_loss']:.4f} "
-                f"val_bbox={val_metrics['bbox_loss']:.4f}"
+                f"val_bbox={val_metrics['bbox_loss']:.4f} "
+                f"val_acc={val_metrics['class_accuracy']:.4f}"
             )
 
 
