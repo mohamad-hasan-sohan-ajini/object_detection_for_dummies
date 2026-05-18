@@ -6,6 +6,8 @@ import torch
 from albumentations.pytorch import ToTensorV2
 from torch.utils.data import DataLoader, Dataset
 
+from config import MAX_NUM_OBJS
+
 DATA_DIR = Path(__file__).resolve().parent
 TRAIN_DATASET_PATH = DATA_DIR / "train_dataset.pt"
 VAL_DATASET_PATH = DATA_DIR / "val_dataset.pt"
@@ -130,14 +132,13 @@ def detection_collate_fn(batch):
     images = torch.stack(images, dim=0)
 
     batch_size = len(targets)
-    max_objects = 2  # or MAX_NUM_OBJS from config
 
-    boxes = torch.zeros((batch_size, max_objects, 4), dtype=torch.float32)
-    labels = torch.zeros((batch_size, max_objects), dtype=torch.int64)
-    object_mask = torch.zeros((batch_size, max_objects), dtype=torch.bool)
+    boxes = torch.zeros((batch_size, MAX_NUM_OBJS, 4), dtype=torch.float32)
+    labels = torch.zeros((batch_size, MAX_NUM_OBJS), dtype=torch.int64)
+    object_mask = torch.zeros((batch_size, MAX_NUM_OBJS), dtype=torch.bool)
 
     for i, target in enumerate(targets):
-        num_objects = min(target["boxes"].shape[0], max_objects)
+        num_objects = min(target["boxes"].shape[0], MAX_NUM_OBJS)
 
         boxes[i, :num_objects] = target["boxes"][:num_objects]
         labels[i, :num_objects] = target["labels"][:num_objects]
