@@ -178,7 +178,7 @@ class TransformerModel(nn.Module):
             nn.Sigmoid(),
         )
 
-    def forward(self, images: Tensor) -> tuple[Tensor, Tensor, Tensor]:
+    def forward(self, images: Tensor) -> tuple[Tensor, Tensor]:
         # extract features
         memory = self.feature_extractor(images)
         # amend data shape
