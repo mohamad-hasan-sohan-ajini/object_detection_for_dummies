@@ -282,7 +282,7 @@ def log_validation_predictions(
             boxes = boxes * float(image_scale)
 
         box_labels = [
-            f"{config.CLASS_NAMES[int(label)]} {float(score):.2f}"
+            f"{config.CLASS_NAMES[int(label)][0].upper()} {float(score):.2f}"
             for label, score in zip(labels, scores)
         ]
 
@@ -293,7 +293,8 @@ def log_validation_predictions(
                 labels=box_labels,
                 colors="red",
                 width=max(1, 2 * image_scale),
-                font_size=max(10, 10 * image_scale),
+                font=config.TENSORBOARD_BOX_FONT,
+                font_size=config.TENSORBOARD_BOX_FONT_SIZE,
             )
         )
 
