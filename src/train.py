@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
+from torchvision.ops import generalized_box_iou_loss
 from torchvision.utils import draw_bounding_boxes, make_grid
 from tqdm.auto import tqdm
 
@@ -83,7 +84,13 @@ def compute_losses(
 
     matched_pred_boxes = pred_boxes[pred_bbox_indices]
     matched_target_boxes = targets["boxes"][target_bbox_indices]
-    bbox_loss = F.smooth_l1_loss(matched_pred_boxes, matched_target_boxes)
+    matched_pred_boxes = xyxy_from_unordered_boxes(matched_pred_boxes)
+    matched_target_boxes = xyxy_from_unordered_boxes(matched_target_boxes)
+    bbox_loss = generalized_box_iou_loss(
+        matched_pred_boxes,
+        matched_target_boxes,
+        reduction="mean",
+    )
 
     loss = config.CLASS_LOSS_WEIGHT * class_loss + config.BBOX_LOSS_WEIGHT * bbox_loss
     metrics = {
