@@ -10,7 +10,7 @@ from torch import Tensor, nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from torchvision.ops import generalized_box_iou_loss
-from torchvision.utils import draw_bounding_boxes, make_grid
+from torchvision.utils import draw_bounding_boxes
 from tqdm.auto import tqdm
 
 import config
@@ -252,7 +252,6 @@ def log_validation_predictions(
     with torch.no_grad():
         pred_class_logits, pred_boxes = model(fixed_images.to(device))
 
-    rendered_images = []
     num_images = min(config.TENSORBOARD_NUM_IMAGES, fixed_images.shape[0])
 
     for image_idx in range(num_images):
@@ -286,23 +285,17 @@ def log_validation_predictions(
             for label, score in zip(labels, scores)
         ]
 
-        rendered_images.append(
-            draw_bounding_boxes(
-                image=image,
-                boxes=boxes,
-                labels=box_labels,
-                colors="red",
-                width=max(1, 2 * image_scale),
-                font=config.TENSORBOARD_BOX_FONT,
-                font_size=config.TENSORBOARD_BOX_FONT_SIZE,
-            )
+        rendered_image = draw_bounding_boxes(
+            image=image,
+            boxes=boxes,
+            labels=box_labels,
+            colors="red",
+            width=max(1, 2 * image_scale),
+            font=config.TENSORBOARD_BOX_FONT,
+            font_size=config.TENSORBOARD_BOX_FONT_SIZE,
         )
 
-    writer.add_image(
-        "validation/predictions",
-        make_grid(rendered_images, nrow=2),
-        epoch,
-    )
+        writer.add_image(f"validation/predictions/{image_idx}", rendered_image, epoch)
 
 
 def main() -> None:
