@@ -201,9 +201,10 @@ if __name__ == "__main__":
     )
     for batch in train_loader:
         images, targets = batch
-        print("Batch of images shape:", images.shape)
-        print("Batch of boxes shape:", targets["boxes"].shape)
-        print("Batch of labels shape:", targets["labels"].shape)
+        print(f"Batch of images shape: {images.shape}")
+        print(f"Batch of boxes shape: {targets['boxes'].shape}")
+        print(f"Batch of labels shape: {targets['labels'].shape}")
         print("Batch of object mask shape:", targets["object_mask"].shape)
+        print(f"labels in batch: {targets['labels']}")
         break
     torch.save(batch, "batch.pt")
