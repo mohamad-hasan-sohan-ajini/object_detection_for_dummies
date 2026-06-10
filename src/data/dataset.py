@@ -204,7 +204,8 @@ if __name__ == "__main__":
         print(f"Batch of images shape: {images.shape}")
         print(f"Batch of boxes shape: {targets['boxes'].shape}")
         print(f"Batch of labels shape: {targets['labels'].shape}")
-        print("Batch of object mask shape:", targets["object_mask"].shape)
+        print(f"Batch of object mask shape: {targets['object_mask'].shape}")
         print(f"labels in batch: {targets['labels']}")
+        print(f"Batch of object mask shape: {targets['object_mask']}")
         break
     torch.save(batch, "batch.pt")
